@@ -1,0 +1,7 @@
+adafruit-ads1x15
+gpiozero >= 1.4.1      
+mysqlclient >= 1.4.2.post1
+spidev >= 3.3       
+rpi-ws281x >= 4.1.0      
+RPi.GPIO >= 0.6.5      
+schedule >= 0.6.0      
