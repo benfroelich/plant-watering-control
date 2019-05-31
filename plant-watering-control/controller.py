@@ -27,9 +27,9 @@ def generate_schedule():
     schedule.clear() # remove all jobs
     
     # then build fresh schedule from file 
-    settings = load_settings()["settings"]
+    settings = load_settings()
     
-    for i,cfg in enumerate(settings):
+    for i,cfg in enumerate(settings["channels"]):
         schedule.every(cfg["interval_days"]).days.at(cfg["time_of_day"]).do(do_watering, 
             **{
                 "sensor_ch": sensor.chans[i], 
@@ -39,10 +39,10 @@ def generate_schedule():
         )
 
     # and add moisture logs
-    schedule.every(2).minutes.do(log_moisture)
+    schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
 
 def load_settings():
-    settings_file = open('./settings.json', 'r')
+    settings_file = open('./../settings.json', 'r')
     return json.load(settings_file)
 
 def log_moisture():

@@ -1,5 +1,6 @@
 {
-  "settings": [
+  "moisture_interval_minutes": 10,
+  "channels": [
     {
       "name": "Lechuga",
       "interval_days": 300,
