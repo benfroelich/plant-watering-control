@@ -1,3 +1,4 @@
+import os
 import schedule
 import json
 import time
@@ -21,12 +22,14 @@ def main():
 
     while True:
         schedule.run_pending()
+        if new_settings():
+            generate_schedule()
         time.sleep(1)
 
 def generate_schedule():
     schedule.clear() # remove all jobs
     
-    # then build fresh schedule from file 
+    # build complete schedule from file 
     settings = load_settings()
     
     for i,cfg in enumerate(settings["channels"]):
@@ -37,13 +40,25 @@ def generate_schedule():
                 "relay_ch": i
             }
         )
-
-    # and add moisture logs
     schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
 
+############### settings file ################
+_settings_file_timestamp = 0
+SETTINGS_FILE_NAME = './../settings.json'
+
+def new_settings():
+    current_time_stamp = os.path.getmtime(SETTINGS_FILE_NAME)
+    return current_time_stamp > _settings_file_timestamp
+
 def load_settings():
-    settings_file = open('./../settings.json', 'r')
+    global _settings_file_timestamp
+    print("loading settings")
+    settings_file = open(SETTINGS_FILE_NAME, 'r')
+    # store the file's current modification timestamp in order
+    # to detect if updated and new settings are available
+    _settings_file_timestamp = os.path.getmtime(SETTINGS_FILE_NAME)
     return json.load(settings_file)
+#############################################
 
 def log_moisture():
     for i,ch in enumerate(sensor.chans):
@@ -68,6 +83,7 @@ def water(relay_ch, duration_mins):
     time.sleep(duration_mins * 60)
     relay_chs[relay_ch].off()
 
+# WIP, and maybe unnecessary
 def test():
     print("checking watering utilities")
     do_watering(**{"sensor_ch": sensor.chans[0], 
