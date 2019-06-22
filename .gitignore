@@ -1,3 +1,7 @@
+# custom to this project (plant-watering-control)
+settings.json
+calibration.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
