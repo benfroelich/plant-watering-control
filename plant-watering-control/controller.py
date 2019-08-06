@@ -8,6 +8,13 @@ from gpiozero import LED
 
 sensor = moisture_sensing.MoistureSensor() 
 
+reservoir_ch = sensor.chans[0]
+moisture_chs = [
+    sensor.chans[1], 
+    sensor.chans[2], 
+    sensor.chans[3], 
+]
+
 relay_chs = [
     LED(27),
     LED(22),
@@ -41,6 +48,7 @@ def generate_schedule():
             }
         )
     schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
+    schedule.every(settings["reservoir.interval_minutes"]).minutes.do(check_reservoir)
 
 ############### settings file ################
 _settings_file_timestamp = 0
@@ -63,6 +71,9 @@ def load_settings():
 def log_moisture():
     for i,ch in enumerate(sensor.chans):
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
+
+def check_reservoir():
+   
 
 def do_watering(sensor_ch, watering_settings, relay_ch):
     print("do_watering")

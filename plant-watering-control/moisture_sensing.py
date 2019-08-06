@@ -20,10 +20,18 @@ class MoistureSensorChannel(AnalogIn):
         super().__init__(ads, ch)
         self.cal_factors = default_cals.copy()
 
+    def get_samples(self, num_samples):
+        sum = 0
+        for sa in range(num_samples):
+            sum += self.voltage
+        avg = sum / num_samples
+        return avg
+            
     def read_moisture(self):
+        num_samples = 10 # take the average of samples
         # dry voltage is higher than wet voltage
         percent = 0
-        v = self.voltage
+        v = self.get_samples(num_samples)
         wet = self.cal_factors["wet_voltage"]
         dry = self.cal_factors["dry_voltage"]
         try:
@@ -39,10 +47,7 @@ class MoistureSensorChannel(AnalogIn):
     # store the average of 100 samples
     def calibrate(self, factor):
         num_samples = 100
-        sum = 0
-        for sa in range(num_samples):
-            sum += self.voltage
-        avg = sum / num_samples
+        avg = self.get_samples(num_samples)
         self.cal_factors[factor] = avg
         print(factor, avg)
 
