@@ -48,7 +48,7 @@ def generate_schedule():
             }
         )
     schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
-    schedule.every(settings["reservoir.interval_minutes"]).minutes.do(check_reservoir)
+    schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir)
 
 ############### settings file ################
 _settings_file_timestamp = 0
@@ -69,18 +69,38 @@ def load_settings():
 #############################################
 
 def log_moisture():
-    for i,ch in enumerate(sensor.chans):
+    for i,ch in enumerate(moisture_chs):
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
 
+_watering_enabled = True
+_watering_message_interval = 24 # hrs nag email
+_watering_message_sent_timestamp = 0
+def send_message(msg):
+    current_timestamp = time.time()
+    if(current_timestamp - _watering_message_interval * 3600 > _watering_message_sent_timestamp):
+        print("TODO: send email or something (LED?)")#send email
+        _watering_message_sent_timestamp = current_timestamp
+
 def check_reservoir():
-   
+    global _watering_enabled
+    reservoir_threshold = 25 # % moisture below which means reservoir low
+    # TODO: make reservoir threshold settable from settings file?
+    # TODO: email or alert configurations for setting?
+    water_level = reservoir_ch.read_moisture()
+    if(water_level < reservoir_threshold):
+        _watering_enabled = False
+        print("water level ({}%) too low!".format(water_level))
+        send_message("warning, water level too low!")
+    else:
+        _watering_enabled = True
 
 def do_watering(sensor_ch, watering_settings, relay_ch):
+    global _watering_enabled
     print("do_watering")
     
     print(sensor_ch.read_moisture())
 
-    if ("thresh_en" in watering_settings and 
+    if (_watering_enabled and "thresh_en" in watering_settings and 
             sensor_ch.read_moisture() < watering_settings["thresh_pct"]) \
             or not "thresh_en" in watering_settings:
         water(relay_ch, watering_settings["duration_mins"])
