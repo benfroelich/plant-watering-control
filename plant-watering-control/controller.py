@@ -5,6 +5,7 @@ import time
 import moisture_sensing
 from logData import log_data
 from gpiozero import LED
+import settings as settings_file
 
 sensor = moisture_sensing.MoistureSensor() 
 
@@ -29,7 +30,7 @@ def main():
 
     while True:
         schedule.run_pending()
-        if new_settings():
+        if settings_file.new_settings():
             generate_schedule()
         time.sleep(1)
 
@@ -37,7 +38,7 @@ def generate_schedule():
     schedule.clear() # remove all jobs
     
     # build complete schedule from file 
-    settings = load_settings()
+    settings = settings_file.load_settings()
     
     for i,cfg in enumerate(settings["channels"]):
         schedule.every(cfg["interval_days"]).days.at(cfg["time_of_day"]).do(do_watering, 
@@ -51,21 +52,6 @@ def generate_schedule():
     schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir)
 
 ############### settings file ################
-_settings_file_timestamp = 0
-SETTINGS_FILE_NAME = './../settings.json'
-
-def new_settings():
-    current_time_stamp = os.path.getmtime(SETTINGS_FILE_NAME)
-    return current_time_stamp > _settings_file_timestamp
-
-def load_settings():
-    global _settings_file_timestamp
-    print("loading settings")
-    settings_file = open(SETTINGS_FILE_NAME, 'r')
-    # store the file's current modification timestamp in order
-    # to detect if updated and new settings are available
-    _settings_file_timestamp = os.path.getmtime(SETTINGS_FILE_NAME)
-    return json.load(settings_file)
 #############################################
 
 def log_moisture():
@@ -76,6 +62,7 @@ _watering_enabled = True
 _watering_message_interval = 24 # hrs nag email
 _watering_message_sent_timestamp = 0
 def send_message(msg):
+    global _watering_message_sent_timestamp
     current_timestamp = time.time()
     if(current_timestamp - _watering_message_interval * 3600 > _watering_message_sent_timestamp):
         print("TODO: send email or something (LED?)")#send email
@@ -87,6 +74,7 @@ def check_reservoir():
     # TODO: make reservoir threshold settable from settings file?
     # TODO: email or alert configurations for setting?
     water_level = reservoir_ch.read_moisture()
+    log_data(water_level, "reservoir_level", "reservoir level (%)")
     if(water_level < reservoir_threshold):
         _watering_enabled = False
         print("water level ({}%) too low!".format(water_level))
