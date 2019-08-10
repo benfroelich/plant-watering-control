@@ -1,7 +1,10 @@
 # custom to this project (plant-watering-control)
 settings.json
 calibration.ini
+
+# authentication data
 credentials.json
+token.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

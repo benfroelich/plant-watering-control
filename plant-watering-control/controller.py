@@ -6,6 +6,7 @@ import moisture_sensing
 from logData import log_data
 from gpiozero import LED
 import settings as settings_file
+import email_notifier as notifier
 
 sensor = moisture_sensing.MoistureSensor() 
 
@@ -61,12 +62,13 @@ def log_moisture():
 _watering_enabled = True
 _watering_message_interval = 24 # hrs nag email
 _watering_message_sent_timestamp = 0
-def send_message(msg):
+def send_nag_message(msg):
     global _watering_message_sent_timestamp
     current_timestamp = time.time()
     if(current_timestamp - _watering_message_interval * 3600 > _watering_message_sent_timestamp):
         print("TODO: send email or something (LED?)")#send email
         _watering_message_sent_timestamp = current_timestamp
+        notifier.email_notify("water reservoir low", "watering deferred", "benfroelich@gmail.com")
 
 def check_reservoir():
     global _watering_enabled
@@ -78,7 +80,7 @@ def check_reservoir():
     if(water_level < reservoir_threshold):
         _watering_enabled = False
         print("water level ({}%) too low!".format(water_level))
-        send_message("warning, water level too low!")
+        send_nag_message("warning, water level too low!")
     else:
         _watering_enabled = True
 
