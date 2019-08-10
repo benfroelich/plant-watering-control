@@ -4,6 +4,7 @@ calibration.ini
 
 # authentication data
 credentials.json
+credentials.py
 token.pickle
 
 # Byte-compiled / optimized / DLL files
