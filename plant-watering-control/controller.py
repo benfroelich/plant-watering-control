@@ -62,25 +62,26 @@ def log_moisture():
 _watering_enabled = True
 _watering_message_interval = 24 # hrs nag email
 _watering_message_sent_timestamp = 0
-def send_nag_message(msg):
+def send_nag_message(recipients, subject, body):
     global _watering_message_sent_timestamp
     current_timestamp = time.time()
     if(current_timestamp - _watering_message_interval * 3600 > _watering_message_sent_timestamp):
-        print("TODO: send email or something (LED?)")#send email
+        print("sending nag email \"{}\"".format(subject))
         _watering_message_sent_timestamp = current_timestamp
-        notifier.email_notify("water reservoir low", "watering deferred", "benfroelich@gmail.com")
+        notifier.send_notification(recipients, subject, body) 
 
 def check_reservoir():
     global _watering_enabled
     reservoir_threshold = 25 # % moisture below which means reservoir low
     # TODO: make reservoir threshold settable from settings file?
-    # TODO: email or alert configurations for setting?
     water_level = reservoir_ch.read_moisture()
     log_data(water_level, "reservoir_level", "reservoir level (%)")
     if(water_level < reservoir_threshold):
         _watering_enabled = False
         print("water level ({}%) too low!".format(water_level))
-        send_nag_message("warning, water level too low!")
+        send_nag_message("benfroelich@gmail.com", "reservoir low", 
+            "water level is too low ({0:.3f}%). Watering will be disabled".format(water_level) + 
+            " until the reservoir is refilled")
     else:
         _watering_enabled = True
 
