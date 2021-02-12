@@ -26,7 +26,6 @@ relay_chs = [
 
 def main():
     
-    # TODO handle schedule changes
     generate_schedule()
 
     while True:
