@@ -18,15 +18,14 @@ moisture_chs = [
 ]
 
 relay_chs = [
-    LED(27),
     LED(22),
     LED(23),
-    LED(24)
+    LED(24),
+    LED(27)
 ]
 
 def main():
     
-    # TODO handle schedule changes
     generate_schedule()
 
     while True:
@@ -44,16 +43,13 @@ def generate_schedule():
     for i,cfg in enumerate(settings["channels"]):
         schedule.every(cfg["interval_days"]).days.at(cfg["time_of_day"]).do(do_watering, 
             **{
-                "sensor_ch": sensor.chans[i], 
+                "sensor_ch": moisture_chs[i], 
                 "watering_settings": cfg,
                 "relay_ch": i
             }
         )
     schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
     schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir)
-
-############### settings file ################
-#############################################
 
 def log_moisture():
     for i,ch in enumerate(moisture_chs):
@@ -105,10 +101,10 @@ def water(relay_ch, duration_mins):
     time.sleep(duration_mins * 60)
     relay_chs[relay_ch].off()
 
-# WIP, and maybe unnecessary
+# WIP
 def test():
     print("checking watering utilities")
-    do_watering(**{"sensor_ch": sensor.chans[0], 
+    do_watering(**{"sensor_ch": moisture_chs[0], 
         "watering_settings":    {
              "name": "Lechuga",
              "interval_days": 1,

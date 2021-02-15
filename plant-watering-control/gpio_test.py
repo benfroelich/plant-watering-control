@@ -10,9 +10,9 @@ relay_chs = [
 
 while True:
     try:
-        ch_num = int(input("enter channel 0-3: "))
+        ch_num = int(raw_input("enter channel 0-3: "))
         relay_chs[ch_num].on()
-        input("press enter to turn off")
+        raw_input("press enter to turn off")
         relay_chs[ch_num].off()
     except ValueError as err:
         print(err)
