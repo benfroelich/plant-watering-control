@@ -18,10 +18,10 @@ moisture_chs = [
 ]
 
 relay_chs = [
+    LED(27),
     LED(22),
     LED(23),
-    LED(24),
-    LED(27)
+    LED(24)
 ]
 
 def main():
@@ -35,6 +35,7 @@ def main():
         time.sleep(1)
 
 def generate_schedule():
+    print("generating schedule")
     schedule.clear() # remove all jobs
     
     # build complete schedule from file 
@@ -52,6 +53,7 @@ def generate_schedule():
     schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir)
 
 def log_moisture():
+    print("logging moisture")
     for i,ch in enumerate(moisture_chs):
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
 
