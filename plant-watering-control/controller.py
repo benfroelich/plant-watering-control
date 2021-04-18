@@ -2,33 +2,20 @@ import os
 import schedule
 import json
 import time
-import moisture_sensing
+import threading
 from logData import log_data
-from gpiozero import LED
 import settings as settings_file
 import email_notifier as notifier
-
-sensor = moisture_sensing.MoistureSensor() 
-
-reservoir_ch = sensor.chans[0]
-moisture_chs = [
-    sensor.chans[1], 
-    sensor.chans[2], 
-    sensor.chans[3], 
-]
-
-relay_chs = [
-    LED(27),
-    LED(22),
-    LED(23),
-    LED(24)
-]
+import hardware
+import manual_controls
 
 def main():
     
     generate_schedule()
 
     while True:
+        if manual_controls.requested():
+            manual_control.run()
         schedule.run_pending()
         if settings_file.new_settings():
             generate_schedule()
@@ -54,7 +41,7 @@ def generate_schedule():
 
 def log_moisture():
     print("logging moisture")
-    for i,ch in enumerate(moisture_chs):
+    for i,ch in enumerate(hardware.moisture_chs):
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
 
 _watering_enabled = True
@@ -71,14 +58,13 @@ def send_nag_message(recipients, subject, body):
 def check_reservoir():
     global _watering_enabled
     reservoir_threshold = 25 # % moisture below which means reservoir low
-    # TODO: make reservoir threshold settable from settings file?
-    water_level = reservoir_ch.read_moisture()
+    water_level = hardware.reservoir_ch.read_moisture()
     log_data(water_level, "reservoir_level", "reservoir level (%)")
     if(water_level < reservoir_threshold):
         _watering_enabled = False
         print("water level ({}%) too low!".format(water_level))
         send_nag_message("benfroelich@gmail.com", "reservoir low", 
-            "water level is too low ({0:.3f}%). Watering will be disabled".format(water_level) + 
+            "water level is too low ({0:.1f}%). Watering will be disabled".format(water_level) + 
             " until the reservoir is refilled")
     else:
         _watering_enabled = True
@@ -94,16 +80,17 @@ def do_watering(watering_settings):
     if (_watering_enabled and "thresh_en" in watering_settings and 
             sensor_ch.read_moisture() < watering_settings["thresh_pct"]) \
             or not "thresh_en" in watering_settings:
-        water(relay_ch, watering_settings["duration_mins"])
+        t = threading.Thread(target=water, args=(relay_ch, watering_settings["duration_mins"]))
+        t.start()
         log_data(watering_settings["duration_mins"], 
                  "watering_{}".format(watering_settings["name"]), 
                  "watering duration (min)")
 
 def water(relay_ch, duration_mins):
     print("watering {} for {}".format(relay_ch, duration_mins))
-    relay_chs[relay_ch].on()
+    hardware.relay_chs[relay_ch].on()
     time.sleep(duration_mins * 60)
-    relay_chs[relay_ch].off()
+    hardware.relay_chs[relay_ch].off()
 
 # WIP
 def test():
