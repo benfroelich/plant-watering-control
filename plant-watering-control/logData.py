@@ -1,11 +1,11 @@
-import MySQLdb
+import mariadb
 import os
 
-db = MySQLdb.connect( 
-        os.environ["PLANT_WATERING_DB_HOST"], 
-        os.environ["PLANT_WATERING_DB_USER"], 
-        os.environ["PLANT_WATERING_DB_PW"], 
-        os.environ["PLANT_WATERING_DB"])
+db = mariadb.connect( 
+        host = os.environ["PLANT_WATERING_DB_HOST"], 
+        user = os.environ["PLANT_WATERING_DB_USER"], 
+        password = os.environ["PLANT_WATERING_DB_PW"], 
+        database = os.environ["PLANT_WATERING_DB"])
 curs = db.cursor()
 
 def log_data(data, sensorName, units):

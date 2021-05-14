@@ -8,30 +8,69 @@ import settings as settings_file
 import email_notifier as notifier
 import hardware
 import manual_controls
+import asyncio
+  
+def run_continuously(interval=1):
+    """Continuously run, while executing pending jobs at each
+    elapsed time interval.
+    @return cease_continuous_run: threading. Event which can
+    be set to cease continuous run. Please note that it is
+    *intended behavior that run_continuously() does not run
+    missed jobs*. For example, if you've registered a job that
+    should run every minute and you set a continuous run
+    interval of one hour then your job won't be run 60 times
+    at each interval but only once.
+    """
+    pause = threading.Event()
 
-def main():
+    class ScheduleThread(threading.Thread):
+        @classmethod
+        def run(cls):
+            while True:
+                if not pause.is_set():
+                    schedule.run_pending()
+                time.sleep(interval)
+
+    continuous_thread = ScheduleThread()
+    continuous_thread.start()
+    return pause
+
+
+async def monitor_settings(pause_schedule):
+    if await settings_file.new_settings(): 
+        pause_schedule.set()
+        await generate_schedule()
+        pause_schedule.clear()
+
+#async def run_manual_controls(pause_schedule):
+
+async def main():
     
     generate_schedule()
+    pause_schedule = run_continuously()
 
     while True:
-        if manual_controls.requested():
-            manual_control.run()
-        schedule.run_pending()
-        if settings_file.new_settings():
-            generate_schedule()
-        time.sleep(1)
+        # begin asyncio loop that:
+        #     checks for schedule file changes, and if there are any, regenerate the schedule
+        #     services the manual_controls socket, pausing the schedule if there is a manual control session active
+        #     schedule pausing is facilitated by passing in the schedule pause Event
+        #manual_control.run()
+        #schedule.run_pending()
+        await monitor_settings(pause_schedule)
 
-def generate_schedule():
+
+async def generate_schedule():
     print("generating schedule")
     schedule.clear() # remove all jobs
     
     # build complete schedule from file 
-    settings = settings_file.load_settings()
+    settings = await settings_file.load_settings()
     
     for i,cfg in enumerate(settings["zones"]):
         if "zone_en" in cfg:
             for time in cfg["time_of_day"]:
-                schedule.every(cfg["interval_days"]).days.at(time).do(do_watering, 
+                schedule.every(cfg["interval_days"]).days.at(time).do(
+                    do_watering, 
                     **{
                         "watering_settings": cfg,
                     }
@@ -45,7 +84,7 @@ def log_moisture():
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
 
 _watering_enabled = True
-_watering_message_interval = 24 # hrs nag email
+_watering_message_interval = 24 # interval in hrs for nag email
 _watering_message_sent_timestamp = 0
 def send_nag_message(recipients, subject, body):
     global _watering_message_sent_timestamp
@@ -114,5 +153,5 @@ def test():
     # integration test here
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
     #test()
