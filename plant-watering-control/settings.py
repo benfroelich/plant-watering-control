@@ -11,8 +11,8 @@ async def new_settings():
 async def load_settings():
     global _settings_file_timestamp
     print("loading settings")
-    settings_file = await open(SETTINGS_FILE_NAME, 'r')
+    settings_file = open(SETTINGS_FILE_NAME, 'r')
     # store the file's current modification timestamp in order
     # to detect if updated and new settings are available
     _settings_file_timestamp = os.path.getmtime(SETTINGS_FILE_NAME)
-    return await json.load(settings_file)
+    return json.load(settings_file)

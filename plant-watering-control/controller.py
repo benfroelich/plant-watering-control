@@ -13,8 +13,8 @@ import asyncio
 def run_continuously(interval=1):
     """Continuously run, while executing pending jobs at each
     elapsed time interval.
-    @return cease_continuous_run: threading. Event which can
-    be set to cease continuous run. Please note that it is
+    @return pause: threading Event which can
+    be set to pause continuous run. Please note that it is
     *intended behavior that run_continuously() does not run
     missed jobs*. For example, if you've registered a job that
     should run every minute and you set a continuous run
@@ -37,27 +37,23 @@ def run_continuously(interval=1):
 
 
 async def monitor_settings(pause_schedule):
-    if await settings_file.new_settings(): 
-        pause_schedule.set()
-        await generate_schedule()
-        pause_schedule.clear()
+    while True:
+        await asyncio.sleep(1)
+        if await settings_file.new_settings(): 
+            pause_schedule.set()
+            await generate_schedule()
+            pause_schedule.clear()
 
 #async def run_manual_controls(pause_schedule):
 
 async def main():
-    
-    generate_schedule()
+    await generate_schedule()
     pause_schedule = run_continuously()
 
-    while True:
-        # begin asyncio loop that:
-        #     checks for schedule file changes, and if there are any, regenerate the schedule
-        #     services the manual_controls socket, pausing the schedule if there is a manual control session active
-        #     schedule pausing is facilitated by passing in the schedule pause Event
-        #manual_control.run()
-        #schedule.run_pending()
-        await monitor_settings(pause_schedule)
-
+    await asyncio.gather(
+        manual_controls.serve(pause_schedule),
+        monitor_settings(pause_schedule)
+    )
 
 async def generate_schedule():
     print("generating schedule")

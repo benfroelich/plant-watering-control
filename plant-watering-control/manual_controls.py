@@ -1,62 +1,51 @@
 import time
+import datetime
 import hardware
 import asyncio
 import os
+import json
 
 HOST = "127.0.0.1"
 PORT = os.environ["MANUAL_CONTROL_PORT"]
 
-input_message = ""
-status_output = ""
-
 ##### section for controlling hardware
 
+    #hardware.relay_chs[relay_ch].on()
 #####
 
 class TcpHandler:
     async def handle_tcp_packet(self, reader, writer):
-        global input_message
-        global status_output
         data = await reader.read(100)
         message = data.decode()
         addr = writer.get_extra_info('peername')
-        if message.startswith("start"):
-            input_message = message
-            self.request_event.set()
+        
+        await self.process_request(message),
+        status_output = await self.get_status()
 
-        print(f"Received {message!r} from {addr!r}")
+        print(f'Received {message!r} from {addr!r}')
 
-        print(f"Send: {message!r}")
+        print(f'Send: {message!r}')
         writer.write(status_output.encode())
         await writer.drain()
-
-        print("Close the connection")
         writer.close()
 
-#async def tcp_server():
-#    server = await asyncio.start_server(
-#                   handle_tcp_packet, '127.0.0.1', 
-#                   os.environ["MANUAL_CONTROL_PORT"])
-#
-#    addr = server.sockets[0].getsockname()
-#    print(f'Serving on {addr}')
-#
-#    async with server:
-#        await server.serve_forever()
+    async def get_status(self):
+        status_output = f'time is {datetime.datetime.now()}'
+        return status_output
+        
+    async def process_request(self, request):
+        print(f'process_request: {request}')
+        if request.startswith('start'):
+            self.pause_schedule_event.set()
+            print('pausing schedule')
+        if request.startswith('stop'):
+            self.pause_schedule_event.clear()
+            print('unpausing schedule')
+        print(f'process_request done')
 
-#def serve_tcp()
-    
-async def nag(request_event):
-    global input_message
-    global status_output
-    while True:
-        await request_event.wait()
-        status_output = f'nag saw {input_message}'
-        request_event.clear()
-
-async def serve(request_event):
+async def serve(pause_schedule_event):
     handler = TcpHandler()
-    handler.request_event = request_event
+    handler.pause_schedule_event = pause_schedule_event
     server = await asyncio.start_server(
                    handler.handle_tcp_packet, '127.0.0.1', 
                    os.environ["MANUAL_CONTROL_PORT"])
@@ -65,13 +54,18 @@ async def serve(request_event):
     print(f'Serving on {addr}')
     await server.serve_forever()
 
-async def main():
-    request_event = asyncio.Event()
-    server_task = asyncio.create_task(serve(request_event))
-    nag_task = asyncio.create_task(nag(request_event))
+async def nag(pause_event):
+    while True:
+        await asyncio.sleep(1)
+        if pause_event.is_set(): print('not running sched')
+        else: print('running sched')
 
-    await server_task
-    await nag_task
+async def main():
+    pause_schedule_event = asyncio.Event()
+    await asyncio.gather(
+        serve(pause_schedule_event),
+        nag(pause_schedule_event)
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
