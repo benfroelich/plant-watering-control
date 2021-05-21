@@ -44,17 +44,6 @@ async def monitor_settings(pause_schedule):
             await generate_schedule()
             pause_schedule.clear()
 
-#async def run_manual_controls(pause_schedule):
-
-async def main():
-    await generate_schedule()
-    pause_schedule = run_continuously()
-
-    await asyncio.gather(
-        manual_controls.serve(pause_schedule),
-        monitor_settings(pause_schedule)
-    )
-
 async def generate_schedule():
     print("generating schedule")
     schedule.clear() # remove all jobs
@@ -98,6 +87,7 @@ def check_reservoir():
     if(water_level < reservoir_threshold):
         _watering_enabled = False
         print("water level ({}%) too low!".format(water_level))
+        # TODO - make email address parameterized in settings file
         send_nag_message("benfroelich@gmail.com", "reservoir low", 
             "water level is too low ({0:.1f}%). Watering will be disabled".format(water_level) + 
             " until the reservoir is refilled")
@@ -105,10 +95,9 @@ def check_reservoir():
         _watering_enabled = True
 
 def do_watering(watering_settings):
-    sensor_ch = watering_settings["in_ch"];
-    relay_ch = watering_settings["out_ch"];
+    sensor_ch = hardware.moisture_chs[watering_settings["in_ch"]]
+    relay_ch = watering_settings["out_ch"]
     global _watering_enabled
-    print("do_watering")
     
     print(sensor_ch.read_moisture())
 
@@ -147,6 +136,15 @@ def test():
     # unit test of schedule generator/reader of json file
     # unit test of HW control
     # integration test here
+
+async def main():
+    await generate_schedule()
+    pause_schedule = run_continuously()
+
+    await asyncio.gather(
+        manual_controls.serve(pause_schedule),
+        monitor_settings(pause_schedule)
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())

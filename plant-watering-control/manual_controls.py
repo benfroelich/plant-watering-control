@@ -14,34 +14,49 @@ PORT = os.environ["MANUAL_CONTROL_PORT"]
 #####
 
 class TcpHandler:
+    # TODO: only allow relays to turn on/off when scheduler is paused
+    # or just pause the scheduler first
     async def handle_tcp_packet(self, reader, writer):
         data = await reader.read(100)
         message = data.decode()
         addr = writer.get_extra_info('peername')
         
-        await self.process_request(message),
-        status_output = await self.get_status()
+        resp = await self.process_request(message),
+        status_output = await self.get_status(resp)
 
-        print(f'Received {message!r} from {addr!r}')
+        print(f'received {message!r} from {addr!r}')
 
-        print(f'Send: {message!r}')
         writer.write(status_output.encode())
         await writer.drain()
         writer.close()
 
-    async def get_status(self):
-        status_output = f'time is {datetime.datetime.now()}'
+    async def get_status(self, resp):
+        status_output = f'status: {resp}'
         return status_output
         
-    async def process_request(self, request):
-        print(f'process_request: {request}')
-        if request.startswith('start'):
-            self.pause_schedule_event.set()
-            print('pausing schedule')
-        if request.startswith('stop'):
-            self.pause_schedule_event.clear()
-            print('unpausing schedule')
-        print(f'process_request done')
+    async def process_request(self, message):
+        resp = 'no response'
+        try:
+            request = json.loads(message)
+        except json.decoder.JSONDecodeError:
+            print("deflecting json decoding error")
+            resp = f'could not decode JSON \'{message}\''
+        else:
+            if request['action'] == 'start':
+                self.pause_schedule_event.set()
+                resp = 'pausing scheduler'
+            elif request['action'] == 'stop':
+                self.pause_schedule_event.clear()
+                resp = 'unpausing scheduler'
+            elif request['action'] == 'output':
+                if 'ch' in request and 'state' in request:
+                    rly = hardware.relay_chs[request['ch']]
+                    if request['state'] == 'on': rly.on()
+                    if request['state'] == 'off': rly.off()
+                    resp = f'ch {request["ch"]} {request["state"]}'
+                else: resp = f'''could not proccess \'{request}\': action == 
+                             output requires ch and state'''
+        return resp
 
 async def serve(pause_schedule_event):
     handler = TcpHandler()
