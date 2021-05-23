@@ -21,42 +21,58 @@ class TcpHandler:
         message = data.decode()
         addr = writer.get_extra_info('peername')
         
-        resp = await self.process_request(message),
-        status_output = await self.get_status(resp)
+        resp = await self.process_request(message)
+        print(resp)
 
         print(f'received {message!r} from {addr!r}')
 
-        writer.write(status_output.encode())
+        writer.write(resp.encode())
         await writer.drain()
         writer.close()
-
-    async def get_status(self, resp):
-        status_output = f'status: {resp}'
-        return status_output
         
     async def process_request(self, message):
-        resp = 'no response'
+        m = hardware.relay_chs[0]
+        if m.is_lit: m.off()
+        else: m.on()
+        resp = {}
         try:
             request = json.loads(message)
         except json.decoder.JSONDecodeError:
             print("deflecting json decoding error")
-            resp = f'could not decode JSON \'{message}\''
+            resp['result'] = f'could not decode JSON \'{message}\''
         else:
             if request['action'] == 'start':
                 self.pause_schedule_event.set()
-                resp = 'pausing scheduler'
+                resp['result'] = 'paused scheduler'
             elif request['action'] == 'stop':
                 self.pause_schedule_event.clear()
-                resp = 'unpausing scheduler'
+                resp['result'] = 'unpaused scheduler'
             elif request['action'] == 'output':
                 if 'ch' in request and 'state' in request:
-                    rly = hardware.relay_chs[request['ch']]
-                    if request['state'] == 'on': rly.on()
-                    if request['state'] == 'off': rly.off()
-                    resp = f'ch {request["ch"]} {request["state"]}'
-                else: resp = f'''could not proccess \'{request}\': action == 
-                             output requires ch and state'''
-        return resp
+                    try:
+                        ch = int(request['ch'])
+                        rly = hardware.relay_chs[ch]
+                    except ValueError:
+                        resp['result'] = f'invalid channel string \'{request["ch"]}\''
+                    except IndexError:
+                        resp['result'] = f'channel {request["ch"]} out of bounds'
+                    else:
+                        if request['state'] == 'on': rly.on()
+                        if request['state'] == 'off': rly.off()
+                        resp['result'] = f'ch {request["ch"]} {request["state"]}'
+                else: resp['result'] = f'''could not proccess \'{request}\': 
+                                           action == output requires ch and state'''
+            elif request['action'] == 'get-status':
+                resp['result'] = 'returning current status'
+                resp['output'] = {}
+                for i,ch in enumerate(hardware.relay_chs):
+                    resp['output'][f'ch{i}'] = 'on' if ch.is_lit else 'off'
+                resp['moisture'] = {}
+                for i,ch in enumerate(hardware.moisture_chs):
+                    resp['moisture'][f'ch{i}'] = f'{ch.read_moisture()} %'
+                resp['reservoir'] = f'{hardware.reservoir_ch.read_moisture()} %'
+
+        return json.dumps(resp)
 
 async def serve(pause_schedule_event):
     handler = TcpHandler()
