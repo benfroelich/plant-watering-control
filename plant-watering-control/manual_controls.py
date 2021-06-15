@@ -31,9 +31,6 @@ class TcpHandler:
         writer.close()
         
     async def process_request(self, message):
-        m = hardware.relay_chs[0]
-        if m.is_lit: m.off()
-        else: m.on()
         resp = {}
         try:
             request = json.loads(message)
@@ -68,6 +65,7 @@ class TcpHandler:
                 for i,ch in enumerate(hardware.relay_chs):
                     resp['output'][f'ch{i}'] = 'on' if ch.is_lit else 'off'
                 resp['moisture'] = {}
+                # TODO consider asyncio for ADC readings
                 for i,ch in enumerate(hardware.moisture_chs):
                     resp['moisture'][f'ch{i}'] = f'{ch.read_moisture()} %'
                 resp['reservoir'] = f'{hardware.reservoir_ch.read_moisture()} %'

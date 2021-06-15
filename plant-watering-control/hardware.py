@@ -16,3 +16,8 @@ relay_chs = [
     LED(23),
     LED(24)
 ]
+
+
+if __name__ == "__main__":
+    for rly in relay_chs:
+        rly.on()
