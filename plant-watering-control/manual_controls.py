@@ -47,7 +47,10 @@ class TcpHandler:
             elif request['action'] == 'output':
                 if 'ch' in request and 'state' in request:
                     try:
-                        ch = int(request['ch'])
+                        if request['ch'].startswith('ch'):
+                            ch = int(request['ch'][len('ch'):])
+                        else:
+                            ch = int(request['ch'])
                         rly = hardware.relay_chs[ch]
                     except ValueError:
                         resp['result'] = f'invalid channel string \'{request["ch"]}\''
