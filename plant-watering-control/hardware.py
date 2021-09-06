@@ -3,8 +3,8 @@ import moisture_sensing
 
 sensor = moisture_sensing.MoistureSensor() 
 
-reservoir_ch = sensor.chans[0]
 moisture_chs = [
+    sensor.chans[0],
     sensor.chans[1], 
     sensor.chans[2], 
     sensor.chans[3], 

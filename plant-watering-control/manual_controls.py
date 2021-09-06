@@ -4,6 +4,7 @@ import hardware
 import asyncio
 import os
 import json
+import controller_status
 
 HOST = "127.0.0.1"
 PORT = os.environ["MANUAL_CONTROL_PORT"]
@@ -71,7 +72,7 @@ class TcpHandler:
                 # TODO consider asyncio for ADC readings
                 for i,ch in enumerate(hardware.moisture_chs):
                     resp['moisture'][f'ch{i}'] = f'{ch.read_moisture()} %'
-                resp['reservoir'] = f'{hardware.reservoir_ch.read_moisture()} %'
+                resp['watering_enabled'] = controller_status._watering_enabled
 
         return json.dumps(resp)
 

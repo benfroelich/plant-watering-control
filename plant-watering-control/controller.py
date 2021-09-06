@@ -9,6 +9,7 @@ import email_notifier as notifier
 import hardware
 import manual_controls
 import asyncio
+import controller_status
   
 def run_continuously(interval=1):
     """Continuously run, while executing pending jobs at each
@@ -61,14 +62,14 @@ async def generate_schedule():
                     }
                 )
     schedule.every(settings["moisture_interval_minutes"]).minutes.do(log_moisture)
-    schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir)
+    schedule.every(settings["reservoir"]["interval_minutes"]).minutes.do(check_reservoir, 
+            **{"settings": settings})
 
 def log_moisture():
     print("logging moisture")
     for i,ch in enumerate(hardware.moisture_chs):
         log_data(ch.read_moisture(), "moisture_{}".format(i), "% moisture")
 
-_watering_enabled = True
 _watering_message_interval = 24 # interval in hrs for nag email
 _watering_message_sent_timestamp = 0
 def send_nag_message(recipients, subject, body):
@@ -79,18 +80,24 @@ def send_nag_message(recipients, subject, body):
         _watering_message_sent_timestamp = current_timestamp
         notifier.send_notification(recipients, subject, body) 
 
-def check_reservoir():
+def check_reservoir(settings):
     global _watering_enabled
     reservoir_threshold = 25 # % moisture below which means reservoir low
-    water_level = hardware.reservoir_ch.read_moisture()
-    log_data(water_level, "reservoir_level", "reservoir level (%)")
-    if(water_level < reservoir_threshold):
-        _watering_enabled = False
-        print("water level ({}%) too low!".format(water_level))
-        # TODO - make email address parameterized in settings file
-        send_nag_message("benfroelich@gmail.com", "reservoir low", 
-            "water level is too low ({0:.1f}%). Watering will be disabled".format(water_level) + 
-            " until the reservoir is refilled")
+    if 'reservoir_ch' in settings:
+        try:
+            ch = int(settings["reservoir_ch"])
+        except ValueError:
+            print(f'warning - invalid reservoir_ch \'{ch}\' in settings')
+        finally:
+            water_level = hardware.moisture_ch[ch].read_moisture()
+            log_data(water_level, f'reservoir_level_ch{ch}', "reservoir level (%)")
+            if(water_level < reservoir_threshold):
+                _watering_enabled = False
+                print("water level ({}%) too low!".format(water_level))
+                # TODO - make email address parameterized in settings file
+                send_nag_message("benfroelich@gmail.com", "reservoir low", 
+                    "water level is too low ({0:.1f}%). Watering will be disabled".format(water_level) + 
+                    " until the reservoir is refilled")
     else:
         _watering_enabled = True
 
