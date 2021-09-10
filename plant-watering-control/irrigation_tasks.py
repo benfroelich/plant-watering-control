@@ -13,9 +13,10 @@ def check_reservoir(settings):
         try:
             ch = int(settings["reservoir_ch"])
         except ValueError:
+            ch = settings["reservoir_ch"]
             print(f'warning - invalid reservoir_ch \'{ch}\' in settings')
-        finally:
-            water_level = hardware.moisture_ch[ch].read_moisture()
+        else:
+            water_level = hardware.moisture_chs[ch].read_moisture()
             log_data(water_level, f'reservoir_level_ch{ch}', "reservoir level (%)")
             if(water_level < reservoir_threshold):
                 _watering_enabled = False
