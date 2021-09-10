@@ -1,5 +1,6 @@
 from gpiozero import LED
 import moisture_sensing
+import time
 
 sensor = moisture_sensing.MoistureSensor() 
 
@@ -16,7 +17,6 @@ relay_chs = [
     LED(23),
     LED(24)
 ]
-
 
 if __name__ == "__main__":
     for rly in relay_chs:

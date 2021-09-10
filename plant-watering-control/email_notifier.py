@@ -1,8 +1,19 @@
+import time
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 import credentials # email username and password
+
+_watering_message_sent_timestamp = 0
+def send_nag_message(recipients, subject, body):
+    watering_message_interval = 24 # interval in hrs for nag email
+    global _watering_message_sent_timestamp
+    current_timestamp = time.time()
+    if(current_timestamp - _watering_message_interval * 3600 > _watering_message_sent_timestamp):
+        print("sending nag email \"{}\"".format(subject))
+        _watering_message_sent_timestamp = current_timestamp
+        notifier.send_notification(recipients, subject, body) 
 
 def send_notification(recipients, subject, body):
     port = 465  # For SSL

@@ -16,3 +16,4 @@ async def load_settings():
     # to detect if updated and new settings are available
     _settings_file_timestamp = os.path.getmtime(SETTINGS_FILE_NAME)
     return json.load(settings_file)
+
